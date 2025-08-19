@@ -1,0 +1,77 @@
+You are an expert Python full‑stack engineer working in an LLM‑powered IDE. Build a PC‑runnable app named **Car Lister** with these requirements. Do NOT invent your own specs—follow this exactly.
+
+## Goals
+1) Simple GUI for uploading a car image and a free‑form text description.
+2) Convert the description into a structured JSON schema using **Azure OpenAI (GPT‑4o mini)** via **LangChain**.
+3) Derive **body_type** from the uploaded image using a pluggable function (use a dummy heuristic for now).
+4) Merge the classifier output into the JSON and **email** both JSON and the image to a configured Gmail address a few seconds after submit.
+5) Include basic prompt‑injection defenses, a design diagram, and a user manual.
+
+## Tech choices
+- Python 3.10+
+- **Streamlit** for the GUI
+- **langchain-openai** to call Azure OpenAI Chat Completions
+- SMTP (Gmail) for email. Credentials via environment variables.
+- `.env` file for configuration (dotenv).
+- Mermaid diagram in `DESIGN.md`.
+- Place code under this structure:
+  - `app_streamlit.py`
+  - `src/config.py`, `src/utils.py`, `src/extractor.py`, `src/emailer.py`, `src/image_classifier.py`
+  - `README.md`, `DESIGN.md`, `requirements.txt`
+
+## JSON schema to produce (must include both price and estimated_price keys):
+{
+  "car": {
+    "body_type": "string | null",
+    "color": "string | null",
+    "brand": "string | null",
+    "model": "string | null",
+    "manufactured_year": "number | null",
+    "motor_size_cc": "number | null",
+    "tires": {
+      "type": "string | null",
+      "manufactured_year": "number | null"
+    },
+    "windows": "string | null",
+    "notices": [ { "type": "string | null", "description": "string | null" } ],
+    "price": { "amount": "number | null", "currency": "string | null" },
+    "estimated_price": { "amount": "number | null", "currency": "string | null" }
+  }
+}
+
+## Prompt‑injection defenses (implement all)
+- Truncate and sanitize user text (strip control chars; redact “ignore previous instructions”, URLs, and emails).
+- Use a strong **system prompt** forbidding anything but strict JSON.
+- Enforce JSON via `response_format={"type":"json_object"}` when supported.
+- Parse only the first `{ ... }` block. On failure, retry up to 3 times.
+- Post‑validate and normalize price fields.
+
+## Azure OpenAI config
+- Read from env:
+  - `AZURE_OPENAI_API_KEY`
+  - `AZURE_OPENAI_API_VERSION` (default `2025-01-01-preview`)
+  - `AZURE_OPENAI_ENDPOINT` (e.g., `https://orionopenai-techtest.openai.azure.com`)
+  - `AZURE_OPENAI_DEPLOYMENT` (e.g., `gpt-4o-mini-AH320`)
+
+## Gmail SMTP
+- Read from env:
+  - `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `DEST_EMAIL`
+
+## App behavior
+- Streamlit page with image uploader and description textarea.
+- On submit:
+  - Sanitize text.
+  - Call LLM to get JSON.
+  - Call dummy classifier to get `body_type` from the image bytes.
+  - Merge `body_type` into JSON.
+  - Email JSON (as attachment) + image (as attachment).
+- Provide a **dry‑run** checkbox to preview the email instead of sending.
+- Show the generated JSON in the UI.
+
+## Deliverables
+- All files above with clear, idiomatic, production‑ready code.
+- `README.md` with setup, run, troubleshooting, and how to replace the dummy classifier.
+- `DESIGN.md` containing a Mermaid architecture diagram.
+- `requirements.txt` pinning versions.
+
+Do not add extra dependencies beyond those listed unless strictly necessary. Keep code clean and commented.
